@@ -1,7 +1,7 @@
 import "server-only";
 import { createServiceSupabase } from "@/lib/supabase/admin";
 import { adminEmails } from "@/lib/supabase/env";
-import { FREE_WELCOME_FALLBACK } from "./denomination";
+import { asSafeCredit, FREE_WELCOME_FALLBACK } from "./denomination";
 import type { BillableKind } from "./operations";
 
 export { rfFromTotalum } from "./denomination";
@@ -168,7 +168,7 @@ export async function captureCredits(reservationId: string, actual: number): Pro
   const db = createServiceSupabase();
   const { error } = await db.rpc("capture_credits", {
     p_reservation_id: reservationId,
-    p_actual: Math.max(0, Math.round(actual)),
+    p_actual: Math.max(0, Math.round(asSafeCredit(actual))),
   });
   if (error) console.error("[credits] capture failed", error);
 }

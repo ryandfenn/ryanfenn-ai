@@ -3,8 +3,10 @@ import { authFailed, resolveVcaasContext } from "@/app/api/vcaas/_shared";
 import { createServiceSupabase } from "@/lib/supabase/admin";
 import { getPlan } from "@/lib/billing/credits";
 import { appOrigin, getStripe, stripeConfigured } from "@/lib/billing/stripe";
+import { billingMaintenanceEnabled, billingMaintenanceResponse } from "@/lib/billing/maintenance";
 
 export async function POST(req: NextRequest) {
+  if (billingMaintenanceEnabled()) return billingMaintenanceResponse();
   const auth = await resolveVcaasContext();
   if (authFailed(auth)) return auth.response;
   if (!stripeConfigured()) {

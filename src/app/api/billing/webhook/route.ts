@@ -4,6 +4,7 @@ import { createServiceSupabase } from "@/lib/supabase/admin";
 import { getStripe, stripeConfigured } from "@/lib/billing/stripe";
 import { getCreditPack, getPlan, getSettingNumber, grantCredits } from "@/lib/billing/credits";
 import { CREDIT_DENOMINATION_KEY, packGrantAmount } from "@/lib/billing/denomination";
+import { billingMaintenanceEnabled } from "@/lib/billing/maintenance";
 
 export const runtime = "nodejs";
 
@@ -59,6 +60,10 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[stripe] signature failed", err);
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
+  }
+
+  if (billingMaintenanceEnabled()) {
+    return NextResponse.json({ error: "Billing maintenance." }, { status: 503 });
   }
 
   if (await alreadyProcessed(event.id)) {

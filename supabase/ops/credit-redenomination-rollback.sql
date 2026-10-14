@@ -1,13 +1,43 @@
--- MANUAL rollback. Restores rows from _rf_redenom_backup_* created by
--- credit-redenomination.sql. Does not drop live tables. Run only if conversion
--- succeeded and you need the previous denomination.
+-- MANUAL rollback from _rf_redenom_backup_* only.
+-- Does NOT revert bigint columns to integer (safe superset; values after restore fit old int4).
+-- Does NOT drop indexes/FKs. Does NOT delete users created after cutover — it ABORTS instead.
+--
+-- Rollback is UNSAFE (and this script refuses) when:
+--   * Anyone signed up after conversion (mixed old/new wallets).
+--   * Any ledger row exists after the backup besides redenomination:100:* notes
+--     (grants, captures, admin adjusts, pack purchases).
+--   * Backup tables are missing/empty.
+-- After those writes, restore from the external PITR / pg_dump instead.
 
 begin;
 
 do $$
+declare
+  v_extra_users integer;
+  v_extra_ledger integer;
+  v_has_backup boolean;
 begin
-  if not exists (select 1 from public._rf_redenom_backup_profiles) then
-    raise exception 'backup table _rf_redenom_backup_profiles is missing or empty';
+  if to_regclass('public._rf_redenom_backup_profiles') is null then
+    raise exception 'backup table _rf_redenom_backup_profiles is missing';
+  end if;
+  execute 'select exists (select 1 from public._rf_redenom_backup_profiles)' into v_has_backup;
+  if not v_has_backup then
+    raise exception 'backup table _rf_redenom_backup_profiles is empty';
+  end if;
+
+  select count(*) into v_extra_users
+  from public.profiles p
+  where not exists (select 1 from public._rf_redenom_backup_profiles b where b.user_id = p.user_id);
+  if v_extra_users > 0 then
+    raise exception 'rollback unsafe: % profile(s) created after cutover', v_extra_users;
+  end if;
+
+  select count(*) into v_extra_ledger
+  from public.credit_ledger l
+  where coalesce(l.idempotency_key, '') not like 'redenomination:100:%'
+    and not exists (select 1 from public._rf_redenom_backup_ledger b where b.id = l.id);
+  if v_extra_ledger > 0 then
+    raise exception 'rollback unsafe: % ledger row(s) written after cutover', v_extra_ledger;
   end if;
 end $$;
 
