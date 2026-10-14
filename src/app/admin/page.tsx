@@ -11,7 +11,7 @@ type Overview = {
   customers: { user_id: string; email: string | null; plan: string; credits: number; subscription_status: string | null }[];
   projects: { project_id: string; user_id: string; totalum_spent: number; rf_spent: number }[];
   plans: { slug: string; name: string; price_cents: number; monthly_credits: number; max_projects: number; stripe_price_id: string | null }[];
-  packs: { id: string; name: string; credits: number; price_cents: number; stripe_price_id: string | null }[];
+  packs: { id: string; name: string; credits: number; price_cents: number; stripe_price_id: string | null; active: boolean; sort_order: number }[];
   settings: Record<string, unknown>;
   totals: { customers: number; projects: number; totalumSpent: number; rfSpent: number };
 };
@@ -109,7 +109,7 @@ export default function AdminPage() {
                 <label className="text-xs text-[#94A3B8]">Infra cap / project<input className="mt-1 w-full" value={infraLimit} onChange={(e) => setInfraLimit(e.target.value)} /></label>
                 <label className="text-xs text-[#94A3B8]">Platform Totalum cap<input className="mt-1 w-full" value={cap} onChange={(e) => setCap(e.target.value)} /></label>
               </div>
-              <Button onClick={saveSettings}>Save settings & plans</Button>
+              <Button onClick={saveSettings}>Save settings, plans & packs</Button>
             </div>
 
             <div className="ei-panel p-6">
@@ -139,6 +139,65 @@ export default function AdminPage() {
                   }} />
                 </div>
               ))}
+            </div>
+
+            <div className="ei-panel p-6">
+              <h2 className="font-display text-lg text-white mb-3">Credit packs</h2>
+              <p className="text-xs text-[#94A3B8] mb-3">Existing packs from the database. Saving updates rows only; it does not create new packs.</p>
+              {data.packs.length === 0 ? (
+                <p className="text-sm text-[#94A3B8]">No credit packs found.</p>
+              ) : (
+                <>
+                  <div className="hidden sm:grid sm:grid-cols-6 gap-2 mb-2 text-[11px] uppercase tracking-[0.14em] text-[#94A3B8]">
+                    <span>Name</span>
+                    <span>Credits</span>
+                    <span>Price (cents)</span>
+                    <span>Active</span>
+                    <span className="sm:col-span-2">Stripe price ID</span>
+                  </div>
+                  {data.packs.map((pack, i) => (
+                    <div key={pack.id} className="grid sm:grid-cols-6 gap-2 mb-2 items-center">
+                      <Input value={pack.name} onChange={(e) => {
+                        const next = [...data.packs];
+                        next[i] = { ...pack, name: e.target.value };
+                        setData({ ...data, packs: next });
+                      }} />
+                      <Input value={pack.credits} onChange={(e) => {
+                        const next = [...data.packs];
+                        next[i] = { ...pack, credits: Number(e.target.value) };
+                        setData({ ...data, packs: next });
+                      }} />
+                      <Input value={pack.price_cents} onChange={(e) => {
+                        const next = [...data.packs];
+                        next[i] = { ...pack, price_cents: Number(e.target.value) };
+                        setData({ ...data, packs: next });
+                      }} />
+                      <label className="flex items-center gap-2 text-sm text-[#94A3B8]">
+                        <input
+                          type="checkbox"
+                          checked={pack.active}
+                          onChange={(e) => {
+                            const next = [...data.packs];
+                            next[i] = { ...pack, active: e.target.checked };
+                            setData({ ...data, packs: next });
+                          }}
+                        />
+                        Active
+                      </label>
+                      <Input
+                        className="sm:col-span-2"
+                        placeholder="stripe_price_id"
+                        value={pack.stripe_price_id || ""}
+                        onChange={(e) => {
+                          const next = [...data.packs];
+                          next[i] = { ...pack, stripe_price_id: e.target.value };
+                          setData({ ...data, packs: next });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
 
             <div className="ei-panel p-6">

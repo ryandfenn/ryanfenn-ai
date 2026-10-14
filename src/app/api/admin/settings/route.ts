@@ -24,8 +24,18 @@ export async function POST(req: NextRequest) {
   }
   if (body.packs) {
     for (const pack of body.packs) {
-      if (!pack.id) continue;
-      await db.from("credit_packs").update(pack).eq("id", pack.id);
+      if (typeof pack.id !== "string" || !pack.id) continue;
+      await db
+        .from("credit_packs")
+        .update({
+          name: pack.name,
+          credits: pack.credits,
+          price_cents: pack.price_cents,
+          stripe_price_id: pack.stripe_price_id || null,
+          active: pack.active,
+          sort_order: pack.sort_order,
+        })
+        .eq("id", pack.id);
     }
   }
   return NextResponse.json({ ok: true });
