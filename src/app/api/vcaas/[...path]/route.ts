@@ -36,6 +36,7 @@ import {
   isProjectCreate,
   isProjectListGet,
 } from "@/lib/billing/operations";
+import { billingMaintenanceEnabled, billingMaintenanceResponse } from "@/lib/billing/maintenance";
 
 interface VcaasApiResponse {
   errors:
@@ -137,6 +138,9 @@ async function handleRequest(
     body = await maybeInjectLimits(req.method, path, body);
 
     const billable = classifyVcaasCall(req.method, path);
+    if (billable && billingMaintenanceEnabled()) {
+      return billingMaintenanceResponse();
+    }
     if (billable) {
       const plan = await getPlan(auth.team.profile.plan);
       if (!plan) {

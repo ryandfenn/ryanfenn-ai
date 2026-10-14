@@ -1,7 +1,10 @@
 import "server-only";
 import { createServiceSupabase } from "@/lib/supabase/admin";
 import { adminEmails } from "@/lib/supabase/env";
+import { asSafeCredit, FREE_WELCOME_FALLBACK } from "./denomination";
 import type { BillableKind } from "./operations";
+
+export { rfFromTotalum } from "./denomination";
 
 export type PlanSlug = "free" | "builder" | "pro";
 
@@ -35,11 +38,6 @@ export interface ProfileRow {
   spend_limit: number | null;
 }
 
-export function rfFromTotalum(totalumCredits: number, multiplier: number): number {
-  if (!Number.isFinite(totalumCredits) || totalumCredits <= 0) return 0;
-  return Math.max(1, Math.ceil(totalumCredits * multiplier));
-}
-
 export async function getSettingNumber(key: string, fallback: number): Promise<number> {
   const db = createServiceSupabase();
   const { data } = await db.from("platform_settings").select("value").eq("key", key).maybeSingle();
@@ -51,6 +49,12 @@ export async function getPlan(slug: string): Promise<PlanRow | null> {
   const db = createServiceSupabase();
   const { data } = await db.from("plans").select("*").eq("slug", slug).maybeSingle();
   return (data as PlanRow | null) ?? null;
+}
+
+export async function getCreditPack(id: string): Promise<{ id: string; credits: number; active: boolean } | null> {
+  const db = createServiceSupabase();
+  const { data } = await db.from("credit_packs").select("id, credits, active").eq("id", id).maybeSingle();
+  return (data as { id: string; credits: number; active: boolean } | null) ?? null;
 }
 
 export async function getProfile(userId: string): Promise<ProfileRow | null> {
@@ -73,7 +77,7 @@ export async function ensureProfile(userId: string, email: string | null): Promi
   const db = createServiceSupabase();
   const plan = await getPlan("free");
   const role = email && adminEmails().includes(email.toLowerCase()) ? "admin" : "customer";
-  const credits = plan?.monthly_credits ?? 20;
+  const credits = plan?.monthly_credits ?? FREE_WELCOME_FALLBACK;
   const row = {
     user_id: userId,
     email,
@@ -164,7 +168,7 @@ export async function captureCredits(reservationId: string, actual: number): Pro
   const db = createServiceSupabase();
   const { error } = await db.rpc("capture_credits", {
     p_reservation_id: reservationId,
-    p_actual: Math.max(0, Math.round(actual)),
+    p_actual: Math.max(0, Math.round(asSafeCredit(actual))),
   });
   if (error) console.error("[credits] capture failed", error);
 }

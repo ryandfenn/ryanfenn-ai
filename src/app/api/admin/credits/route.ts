@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceSupabase } from "@/lib/supabase/admin";
 import { requireAdmin } from "../_guard";
+import { billingMaintenanceEnabled, billingMaintenanceResponse } from "@/lib/billing/maintenance";
 
 export async function POST(req: NextRequest) {
+  if (billingMaintenanceEnabled()) return billingMaintenanceResponse();
   const gate = await requireAdmin();
   if ("response" in gate) return gate.response;
   const body = (await req.json().catch(() => ({}))) as { userId?: string; amount?: number; note?: string };

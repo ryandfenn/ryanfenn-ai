@@ -1,4 +1,6 @@
 -- RyanFenn.ai customer tenancy, wallets, Stripe events, and admin-configurable plans.
+-- Fresh databases only. Do not re-run this file against a live project that already
+-- has data — use supabase/ops/credit-redenomination.sql for the 100x cutover.
 -- Run this in the Supabase SQL editor (or `supabase db push`) before going live.
 -- RLS: customers can read their own rows. Credits and ownership change only via
 -- security-definer functions (service role).
@@ -12,20 +14,20 @@ create table if not exists public.plans (
   monthly_credits integer not null default 0,
   max_projects integer not null default 1,
   stripe_price_id text,
-  prompt_reserve integer not null default 8,
-  publish_reserve integer not null default 4,
-  rebuild_reserve integer not null default 2,
-  server_reserve integer not null default 3,
-  domain_reserve integer not null default 15,
+  prompt_reserve integer not null default 800,
+  publish_reserve integer not null default 400,
+  rebuild_reserve integer not null default 200,
+  server_reserve integer not null default 300,
+  domain_reserve integer not null default 1500,
   active boolean not null default true,
   updated_at timestamptz not null default now()
 );
 
 insert into public.plans (slug, name, price_cents, monthly_credits, max_projects)
 values
-  ('free', 'Free', 0, 20, 1),
-  ('builder', 'Builder', 2900, 250, 20),
-  ('pro', 'Pro', 9900, 1000, 100)
+  ('free', 'Free', 0, 2000, 1),
+  ('builder', 'Builder', 2900, 12500, 20),
+  ('pro', 'Pro', 9900, 45000, 100)
 on conflict (slug) do nothing;
 
 create table if not exists public.credit_packs (
@@ -65,9 +67,9 @@ create unique index if not exists credit_packs_stripe_price_id_key
 -- Idempotent: unique(name) is the conflict target. Existing ids and stripe_price_id are left unchanged.
 insert into public.credit_packs (name, credits, price_cents, sort_order)
 values
-  ('Starter pack', 100, 900, 1),
-  ('Studio pack', 500, 3900, 2),
-  ('Scale pack', 2000, 12900, 3)
+  ('Starter pack', 3500, 900, 1),
+  ('Studio pack', 17500, 3900, 2),
+  ('Scale pack', 60000, 12900, 3)
 on conflict (name) do nothing;
 
 create table if not exists public.platform_settings (
@@ -77,7 +79,8 @@ create table if not exists public.platform_settings (
 );
 
 insert into public.platform_settings (key, value) values
-  ('cost_multiplier', '2.0'::jsonb),
+  ('cost_multiplier', '200'::jsonb),
+  ('credit_denomination', '100'::jsonb),
   ('totalum_dev_limit', '40'::jsonb),
   ('totalum_infra_limit', '25'::jsonb),
   ('platform_monthly_spend_cap_totalum', '5000'::jsonb),
@@ -208,12 +211,12 @@ begin
     new.email,
     v_role,
     'free',
-    coalesce(v_credits, 20),
+    coalesce(v_credits, 2000),
     now(),
     now() + interval '1 month'
   );
   insert into credit_ledger (user_id, kind, amount, balance_after, note, idempotency_key)
-  values (new.id, 'grant', coalesce(v_credits, 20), coalesce(v_credits, 20), 'Welcome credits (Free plan)', 'welcome:' || new.id::text);
+  values (new.id, 'grant', coalesce(v_credits, 2000), coalesce(v_credits, 2000), 'Welcome credits (Free plan)', 'welcome:' || new.id::text);
   return new;
 end;
 $$;

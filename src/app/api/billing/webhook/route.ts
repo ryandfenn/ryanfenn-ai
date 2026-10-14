@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { createServiceSupabase } from "@/lib/supabase/admin";
 import { getStripe, stripeConfigured } from "@/lib/billing/stripe";
-import { getPlan, grantCredits } from "@/lib/billing/credits";
+import { getCreditPack, getPlan, getSettingNumber, grantCredits } from "@/lib/billing/credits";
+import { CREDIT_DENOMINATION_KEY, packGrantAmount } from "@/lib/billing/denomination";
+import { billingMaintenanceEnabled } from "@/lib/billing/maintenance";
 
 export const runtime = "nodejs";
 
@@ -60,6 +62,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
   }
 
+  if (billingMaintenanceEnabled()) {
+    return NextResponse.json({ error: "Billing maintenance." }, { status: 503 });
+  }
+
   if (await alreadyProcessed(event.id)) {
     return NextResponse.json({ received: true, duplicate: true });
   }
@@ -73,13 +79,20 @@ export async function POST(req: NextRequest) {
         const userId = session.metadata?.userId;
         if (!userId) break;
         if (session.mode === "payment" && session.metadata?.kind === "pack") {
-          const credits = Number(session.metadata.credits || 0);
-          if (credits > 0) {
+          const packId = session.metadata.packId;
+          const pack = packId ? await getCreditPack(packId) : null;
+          const denomination = await getSettingNumber(CREDIT_DENOMINATION_KEY, 1);
+          const credits = packGrantAmount({
+            packCredits: pack?.credits,
+            metadataCredits: Number(session.metadata.credits || 0),
+            denomination,
+          });
+          if (credits && credits > 0) {
             await grantCredits({
               userId,
               amount: credits,
               kind: "purchase",
-              note: "Credit pack",
+              note: packId ? `Credit pack ${packId}` : "Credit pack",
               stripeEventId: event.id,
               key: `stripe:${event.id}`,
             });
@@ -147,7 +160,7 @@ export async function POST(req: NextRequest) {
             user_id: profile.user_id,
             kind: "refund",
             amount: 0,
-            note: "Stripe refund recorded — review wallet in admin",
+            note: "Stripe refund recorded — review wallet in admin (no automatic clawback)",
             stripe_event_id: event.id,
             idempotency_key: `stripe:${event.id}`,
           });
