@@ -197,7 +197,7 @@ async function handle(
      * ⚠️ IT RUNS BEFORE THE AGENT IS SERVED BELOW, so an out-of-scope caller cannot
      * fetch the injected editor agent for a project they may not open either.
      */
-    const outOfScope = enforceProjectScope(auth.team, "GET", ["projects", projectId]);
+    const outOfScope = await enforceProjectScope(auth.team, "GET", ["projects", projectId]);
     if (outOfScope) return outOfScope;
 
     /**

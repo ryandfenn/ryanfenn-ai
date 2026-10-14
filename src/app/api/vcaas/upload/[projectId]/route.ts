@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { vcaasUploadRequest } from "@/lib/vcaas-server";
+import { authFailed, enforceProjectScope, resolveVcaasContext } from "@/app/api/vcaas/_shared";
 
 /**
  * ═══ THE MULTIPART UPLOAD PROXY ═════════════════════════════════════════════
@@ -43,6 +44,10 @@ export async function POST(
 ) {
     try {
         const { projectId } = await params;
+        const auth = await resolveVcaasContext();
+        if (authFailed(auth)) return auth.response;
+        const scoped = await enforceProjectScope(auth.team, "POST", ["projects", projectId, "files", "upload"]);
+        if (scoped) return scoped;
 
         // Forward the multipart form data straight through to the VCaaS endpoint.
         const formData = await req.formData();

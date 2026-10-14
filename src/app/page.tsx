@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { uploadFilesToProjectDetailed, splitBySize, MAX_UPLOAD_MB, TOO_LARGE_ADVICE } from "@/lib/upload";
 import { SetupBanners } from "@/components/SetupBanners";
 import { BrandWordmark } from "@/components/BrandMark";
+import { AccountNav } from "@/components/account/AccountNav";
 import type { VcaasProjectSummary } from "@/lib/vcaas-types";
 
 type ViewMode = "cards" | "table";
@@ -526,14 +527,15 @@ export default function DashboardPage() {
           <Link href="/" className="flex items-center">
             <BrandWordmark />
           </Link>
-          <nav className="flex items-center gap-1">
+          <div className="flex items-center gap-1">
             <button
               onClick={focusComposer}
               className="text-[11px] uppercase tracking-[0.18em] text-[#94A3B8] hover:text-[#00DFFF] px-3 py-2 transition-colors"
             >
               New
             </button>
-          </nav>
+            <AccountNav />
+          </div>
         </div>
       </header>
 

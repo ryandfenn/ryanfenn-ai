@@ -245,7 +245,7 @@ export async function POST(
      * explicit `"POST"`. And it runs BEFORE the plan read and before the file tree is
      * fetched, so a refusal costs nothing upstream.
      */
-    const outOfScope = enforceProjectScope(auth.team, "POST", ["projects", projectId]);
+    const outOfScope = await enforceProjectScope(auth.team, "POST", ["projects", projectId]);
     if (outOfScope) return outOfScope;
 
     let body: { changes?: VisualChange[] };
