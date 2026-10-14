@@ -6,7 +6,8 @@
     "check-types-errors": "tsc --noEmit --skipLibCheck",
     "start": "next start",
     "build": "next build",
-    "test:serve": "TESTING_MODE=true PORT=3000 next start"
+    "test:serve": "TESTING_MODE=true PORT=3000 next start",
+    "test": "ts-node --transpile-only --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\",\"esModuleInterop\":true}' src/lib/billing/denomination.test.ts"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
