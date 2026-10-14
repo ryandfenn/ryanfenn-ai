@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { vcaasRequest } from "@/lib/vcaas-server";
+import { authFailed, enforceProjectScope, resolveVcaasContext } from "@/app/api/vcaas/_shared";
 
 // Binary source-code proxy. Fetches the VCaaS source-code signed URL, then
 // downloads the ZIP archive SERVER-SIDE (avoids browser CORS on the storage
@@ -10,6 +11,10 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
+  const auth = await resolveVcaasContext();
+  if (authFailed(auth)) return auth.response;
+  const scoped = await enforceProjectScope(auth.team, "GET", ["projects", projectId, "source-code"]);
+  if (scoped) return scoped;
 
   try {
     // 1) Ask VCaaS for the signed download URL + metadata.

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CreditCardIcon, ExternalLinkIcon } from "lucide-react";
+import { CreditCardIcon } from "lucide-react";
 import { Modal } from "@/components/primitives";
 import { Button } from "@/components/ui/button";
 import { INSUFFICIENT_CREDITS_EVENT } from "@/lib/vcaas";
@@ -28,8 +28,7 @@ import { INSUFFICIENT_CREDITS_EVENT } from "@/lib/vcaas";
  * when they come back.
  */
 
-/** Where credits are actually bought. The account behind `TOTALUM_VCAAS_API_KEY`. */
-const BUY_CREDITS_URL = "https://platform.totalum.app/billing";
+const BUY_CREDITS_URL = "/billing";
 
 export function InsufficientCreditsModal() {
     const [open, setOpen] = React.useState(false);
@@ -46,7 +45,7 @@ export function InsufficientCreditsModal() {
             onOpenChange={setOpen}
             size="sm"
             title="You're out of credits"
-            description="This action needs Totalum credits, and the account behind this app has none left. Top it up and try again — nothing you've built is lost."
+            description="This action needs RyanFenn.ai credits. Add credits or upgrade your plan — nothing you've built is lost."
             footer={
                 <>
                     <Button variant="outline" onClick={() => setOpen(false)}>
@@ -59,10 +58,9 @@ export function InsufficientCreditsModal() {
                           blockers refuse, and being refused here — at the one moment the user
                           has agreed to pay — is the worst possible place for it.
                         */}
-                        <a href={BUY_CREDITS_URL} target="_blank" rel="noopener noreferrer">
+                        <a href={BUY_CREDITS_URL}>
                             <CreditCardIcon className="size-4" aria-hidden />
-                            Buy credits on Totalum
-                            <ExternalLinkIcon className="size-3.5 opacity-70" aria-hidden />
+                            Billing
                         </a>
                     </Button>
                 </>
@@ -74,8 +72,8 @@ export function InsufficientCreditsModal() {
               else's business once the project is published — so it says, in the one place
               the reader is already looking, how to get rid of it.
             */}
-            <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-xs leading-relaxed">
-                Before you publish your project, tell the AI to remove this modal.
+            <p className="text-muted-foreground rounded-sm border border-cyan-400/20 p-3 text-xs leading-relaxed">
+                Plans and credit packs are billed by RyanFenn.ai. The build engine stays invisible.
             </p>
         </Modal>
     );

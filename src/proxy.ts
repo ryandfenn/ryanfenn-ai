@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { withAuthSession } from "@/lib/supabase/session";
 
 const isProduction = process.env.NODE_ENV === "production";
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
@@ -46,9 +47,7 @@ function addCspHeaders(response: NextResponse) {
   return response;
 }
 
-// NOTE: Authentication has been removed — the platform is fully open and every
-// route is public. No user account is required. This proxy now only handles
-// CORS and CSP headers (needed for the live preview iframe and custom domains).
+// Auth sessions (Supabase) plus CORS/CSP for the live preview iframe.
 export async function proxy(request: NextRequest) {
   // Handle CORS preflight requests
   if (request.method === "OPTIONS") {
@@ -58,11 +57,10 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Every route is public — just attach CORS + CSP headers and continue.
   const response = NextResponse.next();
   addCorsHeaders(response, request);
   addCspHeaders(response);
-  return response;
+  return withAuthSession(request, response);
 }
 
 export const config = {

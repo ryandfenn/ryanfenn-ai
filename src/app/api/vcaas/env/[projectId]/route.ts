@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isRoutableProjectSlug } from "@/app/api/vcaas/_shared";
+import { authFailed, enforceProjectScope, isRoutableProjectSlug, resolveVcaasContext } from "@/app/api/vcaas/_shared";
 import { vcaasRequest } from "@/lib/vcaas-server";
 
 /**
@@ -11,6 +11,10 @@ import { vcaasRequest } from "@/lib/vcaas-server";
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
+  const auth = await resolveVcaasContext();
+  if (authFailed(auth)) return auth.response;
+  const scoped = await enforceProjectScope(auth.team, "GET", ["projects", projectId, "env"]);
+  if (scoped) return scoped;
   const env = req.nextUrl.searchParams.get("env");
   if (!isRoutableProjectSlug(projectId) || (env !== "dev" && env !== "live")) {
     return NextResponse.json({ ok: false, error: "Invalid project or env", code: "VALIDATION_ERROR" }, { status: 400 });

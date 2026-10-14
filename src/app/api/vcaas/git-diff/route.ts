@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { publicUrlRejectionReason } from "@/lib/safe-url";
 import { TOTALUM_API_ORIGIN } from "@/lib/vcaas-server";
+import { authFailed, resolveVcaasContext } from "@/app/api/vcaas/_shared";
 
 // Git-diff text proxy. The `gitDiffUrl` returned by the VCaaS conversation API
 // points at an external (signed) storage host, so the browser can't fetch it
@@ -35,6 +36,8 @@ function isAllowedDiffUrl(url: URL): boolean {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await resolveVcaasContext();
+  if (authFailed(auth)) return auth.response;
   const target = req.nextUrl.searchParams.get("url");
 
   if (!target) {
