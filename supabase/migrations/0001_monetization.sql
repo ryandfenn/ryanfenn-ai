@@ -137,13 +137,31 @@ alter table public.credit_reservations enable row level security;
 alter table public.plans enable row level security;
 alter table public.credit_packs enable row level security;
 alter table public.platform_settings enable row level security;
+alter table public.stripe_events enable row level security;
+alter table public.rate_limit_events enable row level security;
 
-create policy "read own profile" on public.profiles for select using (auth.uid() = user_id);
-create policy "read own projects" on public.projects for select using (auth.uid() = user_id);
-create policy "read own ledger" on public.credit_ledger for select using (auth.uid() = user_id);
-create policy "read own reservations" on public.credit_reservations for select using (auth.uid() = user_id);
-create policy "read plans" on public.plans for select using (true);
-create policy "read packs" on public.credit_packs for select using (true);
+-- No SELECT/INSERT/UPDATE/DELETE policies on platform_settings, stripe_events, or
+-- rate_limit_events: anon and authenticated are denied. service_role bypasses RLS.
+
+drop policy if exists "read own profile" on public.profiles;
+drop policy if exists "read own projects" on public.projects;
+drop policy if exists "read own ledger" on public.credit_ledger;
+drop policy if exists "read own reservations" on public.credit_reservations;
+drop policy if exists "read plans" on public.plans;
+drop policy if exists "read packs" on public.credit_packs;
+
+create policy "read own profile" on public.profiles
+  for select to authenticated using (auth.uid() = user_id);
+create policy "read own projects" on public.projects
+  for select to authenticated using (auth.uid() = user_id);
+create policy "read own ledger" on public.credit_ledger
+  for select to authenticated using (auth.uid() = user_id);
+create policy "read own reservations" on public.credit_reservations
+  for select to authenticated using (auth.uid() = user_id);
+create policy "read plans" on public.plans
+  for select to anon, authenticated using (true);
+create policy "read packs" on public.credit_packs
+  for select to anon, authenticated using (true);
 
 -- New auth users get a Free wallet with that plan's monthly credits.
 create or replace function public.handle_new_user()
@@ -380,3 +398,56 @@ begin
   return v_credits;
 end;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Privileges
+-- CREATE FUNCTION grants EXECUTE to PUBLIC in Postgres. These helpers run as
+-- SECURITY DEFINER (table owner), so anon/authenticated must not be able to
+-- call them via PostgREST with an arbitrary user_id.
+-- ---------------------------------------------------------------------------
+
+revoke all on function public.handle_new_user() from public, anon, authenticated;
+grant execute on function public.handle_new_user() to postgres, supabase_auth_admin;
+
+revoke all on function public.reserve_credits(uuid, integer, text, text, text) from public, anon, authenticated;
+grant execute on function public.reserve_credits(uuid, integer, text, text, text) to service_role;
+
+revoke all on function public.capture_credits(uuid, integer) from public, anon, authenticated;
+grant execute on function public.capture_credits(uuid, integer) to service_role;
+
+revoke all on function public.release_credits(uuid) from public, anon, authenticated;
+grant execute on function public.release_credits(uuid) to service_role;
+
+revoke all on function public.adjust_credits(uuid, integer, text, text) from public, anon, authenticated;
+grant execute on function public.adjust_credits(uuid, integer, text, text) to service_role;
+
+revoke all on function public.grant_credits(uuid, integer, text, text, text, text) from public, anon, authenticated;
+grant execute on function public.grant_credits(uuid, integer, text, text, text, text) to service_role;
+
+-- Defense in depth: even with RLS, do not leave INSERT/UPDATE/DELETE to browser roles.
+revoke all on table public.profiles from public, anon, authenticated;
+revoke all on table public.projects from public, anon, authenticated;
+revoke all on table public.credit_ledger from public, anon, authenticated;
+revoke all on table public.credit_reservations from public, anon, authenticated;
+revoke all on table public.platform_settings from public, anon, authenticated;
+revoke all on table public.stripe_events from public, anon, authenticated;
+revoke all on table public.rate_limit_events from public, anon, authenticated;
+revoke all on table public.plans from public, anon, authenticated;
+revoke all on table public.credit_packs from public, anon, authenticated;
+
+grant select on table public.profiles to authenticated;
+grant select on table public.projects to authenticated;
+grant select on table public.credit_ledger to authenticated;
+grant select on table public.credit_reservations to authenticated;
+grant select on table public.plans to anon, authenticated;
+grant select on table public.credit_packs to anon, authenticated;
+
+grant all on table public.profiles to service_role;
+grant all on table public.projects to service_role;
+grant all on table public.credit_ledger to service_role;
+grant all on table public.credit_reservations to service_role;
+grant all on table public.platform_settings to service_role;
+grant all on table public.stripe_events to service_role;
+grant all on table public.rate_limit_events to service_role;
+grant all on table public.plans to service_role;
+grant all on table public.credit_packs to service_role;

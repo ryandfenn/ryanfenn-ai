@@ -80,7 +80,7 @@ export default function AdminPage() {
       <header className="sticky top-0 z-50 border-b border-cyan-400/10 bg-[#05080D]/90">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/"><BrandWordmark /></Link>
-          <AccountNav isAdmin />
+          <AccountNav />
         </div>
       </header>
       <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">

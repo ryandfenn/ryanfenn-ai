@@ -59,7 +59,7 @@ export default function BillingPage() {
       <header className="sticky top-0 z-50 border-b border-cyan-400/10 bg-[#05080D]/90">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link href="/"><BrandWordmark /></Link>
-          <AccountNav email={data?.profile.email} isAdmin={data?.profile.role === "admin"} />
+          <AccountNav />
         </div>
       </header>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-8">

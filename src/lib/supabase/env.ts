@@ -14,12 +14,6 @@ export function supabaseAnonKey(): string {
   return key;
 }
 
-export function supabaseServiceKey(): string {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
-  return key;
-}
-
 export function adminEmails(): string[] {
   return (process.env.ADMIN_EMAILS || "")
     .split(",")
