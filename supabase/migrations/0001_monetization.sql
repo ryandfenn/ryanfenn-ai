@@ -38,12 +38,37 @@ create table if not exists public.credit_packs (
   sort_order integer not null default 0
 );
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.credit_packs'::regclass
+      and contype = 'u'
+      and pg_get_constraintdef(oid) ~* '\(name\)'
+  ) then
+    alter table public.credit_packs add constraint credit_packs_name_key unique (name);
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.credit_packs'::regclass
+      and contype = 'u'
+      and pg_get_constraintdef(oid) ~* '\(sort_order\)'
+  ) then
+    alter table public.credit_packs add constraint credit_packs_sort_order_key unique (sort_order);
+  end if;
+end $$;
+
+create unique index if not exists credit_packs_stripe_price_id_key
+  on public.credit_packs (stripe_price_id)
+  where stripe_price_id is not null;
+
+-- Idempotent: unique(name) is the conflict target. Existing ids and stripe_price_id are left unchanged.
 insert into public.credit_packs (name, credits, price_cents, sort_order)
 values
   ('Starter pack', 100, 900, 1),
   ('Studio pack', 500, 3900, 2),
   ('Scale pack', 2000, 12900, 3)
-on conflict do nothing;
+on conflict (name) do nothing;
 
 create table if not exists public.platform_settings (
   key text primary key,
